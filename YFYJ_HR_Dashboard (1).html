@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YFY Jupiter — HR Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--bd:rgba(255,255,255,0.08);--t:#e6edf3;--t2:#8b949e;--t3:#484f58;--blue:#58a6ff;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#bc8cff;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t);font-size:14px;line-height:1.6;}
+.hdr{position:sticky;top:0;z-index:100;background:rgba(13,17,23,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--bd);padding:0 28px;height:54px;display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:10px;}
+.lm{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#1f6feb,#388bfd);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;}
+.lt{font-size:14px;font-weight:600;letter-spacing:-.3px;}
+.ls{font-size:12px;color:var(--t2);margin-left:4px;}
+.hr{display:flex;align-items:center;gap:14px;}
+.ts{font-size:11px;color:var(--t3);font-family:'DM Mono',monospace;}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-right:5px;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.btn{background:var(--bg3);border:1px solid var(--bd);color:var(--t2);border-radius:6px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.btn:hover{border-color:var(--blue);color:var(--blue);}
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:14px;}
+.spin{width:34px;height:34px;border:2px solid var(--bg3);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ltxt{font-size:12px;color:var(--t2);}
+#err{display:none;margin:20px 28px 0;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.25);border-radius:8px;padding:14px 18px;font-size:13px;color:var(--red);line-height:1.7;}
+#err a{color:var(--blue);}
+#app{display:none;}
+.wrap{padding:22px 28px 40px;max-width:1380px;margin:0 auto;}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:22px;}
+.kpi{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:15px 17px;position:relative;overflow:hidden;animation:fu .4s ease both;}
+.kpi:nth-child(1){animation-delay:.05s}.kpi:nth-child(2){animation-delay:.1s}.kpi:nth-child(3){animation-delay:.15s}.kpi:nth-child(4){animation-delay:.2s}.kpi:nth-child(5){animation-delay:.25s}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.b::after{background:var(--blue)}.g::after{background:var(--green)}.r::after{background:var(--red)}.o::after{background:var(--orange)}.p::after{background:var(--purple)}
+.kl{font-size:9.5px;color:var(--t2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;}
+.kv{font-size:26px;font-weight:600;letter-spacing:-1px;line-height:1;}
+.b .kv{color:var(--blue)}.g .kv{color:var(--green)}.r .kv{color:var(--red)}.o .kv{color:var(--orange)}.p .kv{color:var(--purple)}
+.ks{font-size:10px;color:var(--t3);margin-top:4px;font-family:'DM Mono',monospace;}
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px;}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:17px 19px;animation:fu .45s ease both;animation-delay:.2s;}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid var(--bd);}
+.ct{font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;}
+.bdg{font-size:10px;font-family:'DM Mono',monospace;background:var(--bg3);color:var(--t2);border-radius:4px;padding:2px 8px;}
+.rb-row{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
+.rb-l{font-size:11px;font-family:'DM Mono',monospace;color:var(--t2);width:26px;flex-shrink:0;}
+.rb-t{flex:1;background:var(--bg3);border-radius:3px;height:15px;}
+.rb-f{height:100%;border-radius:3px;min-width:22px;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
+.rb-f span{font-size:9.5px;font-weight:500;color:rgba(255,255,255,.85);}
+.rb-p{font-size:10px;color:var(--t3);font-family:'DM Mono',monospace;width:30px;text-align:right;flex-shrink:0;}
+.dw{display:flex;align-items:center;gap:18px;}
+.li{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12px;}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.lp{margin-left:auto;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;}
+.tt{width:100%;border-collapse:collapse;font-size:12px;}
+.tt th{padding:5px 9px;text-align:left;font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd);}
+.tt td{padding:7px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
+.tt tr:last-child td{border-bottom:none;}
+.tt tr:hover td{background:rgba(255,255,255,.02);}
+.rc{font-family:'DM Mono',monospace;font-weight:500;}
+.rh{color:var(--red)}.rm{color:var(--orange)}.rl{color:var(--green)}
+.mp{width:52px;background:var(--bg3);border-radius:2px;height:4px;display:inline-block;vertical-align:middle;margin-right:5px;}
+.mpf{height:100%;border-radius:2px;}
+.pr{display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.pr:last-child{border-bottom:none;}
+.av{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;}
+.pi{flex:1;min-width:0;}
+.pn{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pm{font-size:10px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pd{font-size:10px;font-family:'DM Mono',monospace;color:var(--t2);flex-shrink:0;}
+.rp{font-size:9px;font-family:'DM Mono',monospace;border-radius:3px;padding:1px 5px;flex-shrink:0;}
+.emp{color:var(--t3);font-size:12px;text-align:center;padding:18px 0;}
+</style>
+</head>
+<body>
+<div id="loading"><div class="spin"></div><div class="ltxt">正在從 Google Sheets 載入資料...</div></div>
+<div id="err"></div>
+<div class="hdr">
+  <div class="logo">
+    <div class="lm">YJ</div>
+    <span class="lt">YFY Jupiter</span>
+    <span class="ls">/ Global HR Dashboard</span>
+  </div>
+  <div class="hr">
+    <span class="ts"><span class="pulse"></span><span id="ts">載入中...</span></span>
+    <button class="btn" onclick="init()">↻ 重新整理</button>
+  </div>
+</div>
+<div id="app"><div class="wrap">
+  <div class="kpis">
+    <div class="kpi b"><div class="kl">Total Headcount 總人數</div><div class="kv" id="kT">—</div><div class="ks" id="kR">—</div></div>
+    <div class="kpi g"><div class="kl">Active 在職</div><div class="kv" id="kA">—</div><div class="ks" id="kAP">—</div></div>
+    <div class="kpi r"><div class="kl">Resigned 離職</div><div class="kv" id="kRs">—</div><div class="ks" id="kRP">—</div></div>
+    <div class="kpi o"><div class="kl">本月離職率 Monthly</div><div class="kv" id="kMR">—</div><div class="ks" id="kMC">—</div></div>
+    <div class="kpi p"><div class="kl">2025 全年離職率 Annual</div><div class="kv" id="kAR">—</div><div class="ks" id="kAC">—</div></div>
+  </div>
+  <div class="g21">
+    <div class="card"><div class="ch"><div class="ct">Headcount by Region 各地區在職人數</div><div class="bdg" id="bA">—</div></div><div id="rBars"></div></div>
+    <div class="card">
+      <div class="ch"><div class="ct">Gender 性別（在職）</div></div>
+      <div class="dw"><canvas id="gC" width="100" height="100" style="flex-shrink:0"></canvas><div id="gL" style="flex:1"></div></div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--bd)">
+        <div class="ct" style="margin-bottom:10px">Classification 員工類型</div>
+        <div id="cL"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="ch"><div class="ct">月離職率趨勢 Monthly Turnover Rate — 2025 至今</div><div class="bdg">% = 當月離職 ÷ 當月在職</div></div>
+    <div style="position:relative;height:190px"><canvas id="tC"></canvas></div>
+  </div>
+  <div class="g3">
+    <div class="card"><div class="ch"><div class="ct">各地區 2025 全年離職率</div><div class="bdg">Annual</div></div><table class="tt" id="rTT"></table></div>
+    <div class="card"><div class="ch"><div class="ct">本月新進 New Joiners</div><div class="bdg" id="bJ">0 人</div></div><div id="joiners"></div></div>
+    <div class="card"><div class="ch"><div class="ct">本月離職 Leavers</div><div class="bdg" id="bL">0 人</div></div><div id="leavers"></div></div>
+  </div>
+</div></div>
+
+<script>
+const CSV='https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8HOadiDhPXE8XbzCP1NmXp4unE2Xz5vLs-M8t-OyaWGolxQnFSbFalb5681bIloolKKzpibb_7FE6/pub?gid=0&single=true&output=csv';
+const RC={TW:'#388bfd',HK:'#f85149',KS:'#bc8cff',MY:'#3fb950',TH:'#d29922',ID:'#ff7b72',SZ:'#58a6ff',VN:'#56d364',MX:'#79c0ff',US:'#8b949e'};
+const RN={TW:'Taiwan',HK:'Hong Kong',KS:'Kunshan',MY:'Malaysia',TH:'Thailand',ID:'Indonesia',SZ:'Shenzhen',VN:'Vietnam',MX:'Mexico',US:'United States'};
+const AVC=[['#1f3c5e','#58a6ff'],['#1e3a2f','#3fb950'],['#3d1c1c','#f85149'],['#2d2040','#bc8cff'],['#3d2e00','#d29922']];
+let gCI=null,tCI=null;
+const av=n=>AVC[(n&&n.charCodeAt(0)||0)%AVC.length];
+const ini=n=>n?String(n).trim().slice(0,1).toUpperCase():'?';
+function pd(v){
+  if(!v||v===''||v==='null') return null;
+  const s=String(v).trim();
+  const m=s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+  const d=new Date(s); return isNaN(d)?null:d;
+}
+const ms=(y,m)=>new Date(y,m-1,1);
+const me=(y,m)=>new Date(y,m,0,23,59,59);
+const wasActive=(e,s,en)=>e.ob&&e.ob<=en&&(!e.res||e.res>=s);
+const resIn=(e,s,en)=>e.res&&e.res>=s&&e.res<=en;
+const fmt=d=>d?`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`:'';
+
+async function init(){
+  document.getElementById('loading').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('err').style.display='none';
+  try{
+    const r=await fetch(CSV);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const txt=await r.text();
+    render(Papa.parse(txt,{skipEmptyLines:true}).data);
+  }catch(e){
+    document.getElementById('loading').style.display='none';
+    const eb=document.getElementById('err');
+    eb.style.display='block';
+    eb.innerHTML=`<strong>無法載入資料（${e.message}）</strong><br><br>
+請確認：<br>
+1. 已在此瀏覽器登入公司 Google 帳號（<a href="https://mail.google.com" target="_blank">開啟 Gmail 登入 →</a>）<br>
+2. Google Sheet 已設定「發布到網路」(File → Share → Publish to web → Master tab → CSV)<br>
+3. 網路連線正常<br><br>
+登入後請點「↻ 重新整理」按鈕`;
+  }
+}
+
+function render(rows){
+  let hi=0;
+  for(let i=0;i<Math.min(rows.length,8);i++){
+    if(rows[i].some(c=>String(c).includes('Employee ID')||String(c).includes('員工編號'))){hi=i;break;}
+  }
+  const hdr=rows[hi].map(c=>String(c).trim().toLowerCase());
+  const col=kws=>{for(const k of kws){const i=hdr.findIndex(h=>h.includes(k));if(i>=0)return i;}return -1;};
+  const CI={
+    reg:col(['region','地區']),eid:col(['employee id','員工編號']),
+    pfn:col(['preferred first','系統顯示名']),
+    gender:col(['gender','性別']),cls:col(['classification','員工身分']),
+    status:col(['employment status','在職狀態']),
+    ob:col(['onboarding','到職']),res:col(['resign date','離職日']),
+    dept:col(['department in english','部門英文']),pos:col(['position in english','英文職稱']),
+  };
+  const emps=[];
+  for(let i=hi+3;i<rows.length;i++){
+    const r=rows[i];
+    if(!r||r.length<3) continue;
+    const eid=CI.eid>=0?String(r[CI.eid]||'').trim():'';
+    if(!eid||eid.length<3||eid.includes('▶')||eid.includes('═')) continue;
+    const reg=CI.reg>=0?String(r[CI.reg]||'').trim():'';
+    if(!reg||reg.length>5||reg.includes('▶')||reg.includes(' ')) continue;
+    emps.push({eid,reg,
+      pfn:CI.pfn>=0?String(r[CI.pfn]||'').trim():'',
+      gender:CI.gender>=0?String(r[CI.gender]||'').trim():'',
+      cls:CI.cls>=0?String(r[CI.cls]||'').trim():'',
+      status:CI.status>=0?String(r[CI.status]||'').trim():'',
+      ob:pd(CI.ob>=0?r[CI.ob]:null),res:pd(CI.res>=0?r[CI.res]:null),
+      dept:CI.dept>=0?String(r[CI.dept]||'').trim():'',
+      pos:CI.pos>=0?String(r[CI.pos]||'').trim():'',
+    });
+  }
+  const active=emps.filter(e=>e.status.includes('Active')||e.status.includes('在職'));
+  const today=new Date(),cy=today.getFullYear(),cm=today.getMonth()+1;
+  const cMs=ms(cy,cm),cMe=me(cy,cm);
+  // KPIs
+  document.getElementById('kT').textContent=emps.length;
+  document.getElementById('kA').textContent=active.length;
+  document.getElementById('kRs').textContent=emps.filter(e=>e.status.includes('Resign')||e.status.includes('離職')).length;
+  document.getElementById('kR').textContent=[...new Set(active.map(e=>e.reg))].length+' regions';
+  document.getElementById('kAP').textContent=(active.length/emps.length*100).toFixed(1)+'% of total';
+  document.getElementById('kRP').textContent=(emps.filter(e=>e.status.includes('Resign')||e.status.includes('離職')).length/emps.length*100).toFixed(1)+'% of total';
+  const mR=emps.filter(e=>resIn(e,cMs,cMe)),mA=emps.filter(e=>wasActive(e,cMs,cMe));
+  const mRate=mA.length>0?mR.length/mA.length:0;
+  document.getElementById('kMR').textContent=(mRate*100).toFixed(1)+'%';
+  document.getElementById('kMC').textContent=mR.length+' resigned this month';
+  const y25s=new Date(2025,0,1),y25e=new Date(2025,11,31,23,59,59);
+  const r25=emps.filter(e=>e.res&&e.res>=y25s&&e.res<=y25e);
+  const hc25=Array.from({length:12},(_,i)=>emps.filter(e=>wasActive(e,ms(2025,i+1),me(2025,i+1))).length);
+  const avg25=hc25.reduce((a,b)=>a+b,0)/12;
+  document.getElementById('kAR').textContent=(avg25>0?r25.length/avg25*100:0).toFixed(1)+'%';
+  document.getElementById('kAC').textContent=r25.length+' resigned in 2025';
+  // Region bars
+  const rCnt={};active.forEach(e=>{rCnt[e.reg]=(rCnt[e.reg]||0)+1;});
+  const sorted=Object.entries(rCnt).sort((a,b)=>b[1]-a[1]);
+  const maxC=sorted[0]?.[1]||1;
+  document.getElementById('bA').textContent=active.length+' active';
+  document.getElementById('rBars').innerHTML=sorted.map(([r,c])=>{
+    const clr=RC[r]||'#8b949e';
+    return `<div class="rb-row"><div class="rb-l">${r}</div><div class="rb-t"><div class="rb-f" style="width:${c/maxC*100}%;background:${clr}"><span>${c}</span></div></div><div class="rb-p">${(c/active.length*100).toFixed(0)}%</div></div>`;
+  }).join('');
+  // Gender
+  const males=active.filter(e=>e.gender==='Male').length,females=active.filter(e=>e.gender==='Female').length;
+  document.getElementById('gL').innerHTML=[{l:'Male 男',v:males,c:'#58a6ff'},{l:'Female 女',v:females,c:'#bc8cff'}]
+    .map(g=>`<div class="li"><div class="dot" style="background:${g.c}"></div><span style="color:var(--t2)">${g.l}</span><span class="lp">${g.v} <span style="color:var(--t3)">(${(g.v/active.length*100).toFixed(0)}%)</span></span></div>`).join('');
+  if(gCI)gCI.destroy();
+  gCI=new Chart(document.getElementById('gC').getContext('2d'),{type:'doughnut',data:{datasets:[{data:[males,females],backgroundColor:['#58a6ff','#bc8cff'],borderWidth:0,hoverOffset:3}]},options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:700}}});
+  const reg2=active.filter(e=>e.cls.includes('Regular')||e.cls.includes('一般')).length,exp2=active.filter(e=>e.cls.includes('Expatriate')||e.cls.includes('外派')).length;
+  document.getElementById('cL').innerHTML=[{l:'Regular 一般員工',v:reg2,c:'#3fb950'},{l:'Expatriate 外派',v:exp2,c:'#d29922'}]
+    .map(c=>`<div class="li"><div class="dot" style="background:${c.c}"></div><span style="color:var(--t2)">${c.l}</span><span class="lp">${c.v}</span></div>`).join('');
+  // Monthly trend
+  const months=[];let my=2025,mm=1;
+  while(my<cy||(my===cy&&mm<=cm)){months.push({y:my,m:mm,lb:`${my}/${String(mm).padStart(2,'0')}`});mm++;if(mm>12){mm=1;my++;}}
+  const mRates=months.map(({y,m})=>{const s=ms(y,m),e2=me(y,m);const rn=emps.filter(e=>resIn(e,s,e2)).length,an=emps.filter(e=>wasActive(e,s,e2)).length;return an>0?+(rn/an*100).toFixed(2):0;});
+  const mRC=months.map(({y,m})=>{const s=ms(y,m),e2=me(y,m);return emps.filter(e=>resIn(e,s,e2)).length;});
+  if(tCI)tCI.destroy();
+  const tc=document.getElementById('tC').getContext('2d');
+  const grad=tc.createLinearGradient(0,0,0,190);grad.addColorStop(0,'rgba(88,166,255,.2)');grad.addColorStop(1,'rgba(88,166,255,0)');
+  tCI=new Chart(tc,{type:'line',data:{labels:months.map(m=>m.lb),datasets:[
+    {label:'離職率 %',data:mRates,borderColor:'#58a6ff',backgroundColor:grad,borderWidth:2,pointRadius:4,pointHoverRadius:6,fill:true,tension:.35,pointBackgroundColor:mRates.map(r=>r>=6?'#f85149':r>=3?'#d29922':'#58a6ff')},
+    {label:'離職人數',data:mRC,borderColor:'#bc8cff',backgroundColor:'transparent',borderWidth:1.5,borderDash:[4,3],pointRadius:3,yAxisID:'y2'}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(22,27,34,.95)',borderColor:'rgba(255,255,255,.1)',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',callbacks:{label:ctx=>ctx.dataset.label==='離職率 %'?` 離職率：${ctx.raw}%`:` 離職人數：${ctx.raw}人`}}},
+    scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#484f58',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#484f58',font:{size:10},callback:v=>v+'%'},position:'left'},y2:{grid:{display:false},ticks:{color:'#484f58',font:{size:10}},position:'right'}}}});
+  // Region turnover
+  const regs=[...new Set(emps.map(e=>e.reg))].filter(Boolean);
+  const rtR=regs.map(r=>{const re=emps.filter(e=>e.reg===r);const rr=re.filter(e=>e.res&&e.res>=y25s&&e.res<=y25e).length;const hc=Array.from({length:12},(_,i)=>re.filter(e=>wasActive(e,ms(2025,i+1),me(2025,i+1))).length);const avg=hc.reduce((a,b)=>a+b,0)/12;const rt=avg>0?rr/avg*100:0;return{r,rr,avg:avg.toFixed(0),rt:rt.toFixed(1)};}).sort((a,b)=>parseFloat(b.rt)-parseFloat(a.rt));
+  document.getElementById('rTT').innerHTML=`<thead><tr><th>Region</th><th>Resigned</th><th>Avg HC</th><th>Rate</th></tr></thead><tbody>${rtR.map(({r,rr,avg,rt})=>{const n=parseFloat(rt),cl=n>=40?'rh':n>=20?'rm':'rl',clr=n>=40?'#f85149':n>=20?'#d29922':'#3fb950',pw=Math.min(100,n/80*100);return`<tr><td style="font-weight:500">${r} <span style="font-size:10px;color:var(--t3)">${RN[r]||''}</span></td><td style="color:var(--t2)">${rr}</td><td style="color:var(--t2);font-family:'DM Mono',monospace">${avg}</td><td><div class="mp"><div class="mpf" style="width:${pw}%;background:${clr}"></div></div><span class="rc ${cl}">${rt}%</span></td></tr>`;}).join('')}</tbody>`;
+  // Joiners
+  const joiners=emps.filter(e=>e.ob&&e.ob>=cMs&&e.ob<=cMe).slice(0,12);
+  document.getElementById('bJ').textContent=joiners.length+' 人';
+  document.getElementById('joiners').innerHTML=joiners.length===0?`<div class="emp">本月暫無新進人員</div>`:joiners.map(e=>{const nm=e.pfn||e.eid;const[bg,fg]=av(nm);const clr=RC[e.reg]||'#8b949e';return`<div class="pr"><div class="av" style="background:${bg};color:${fg}">${ini(nm)}</div><div class="pi"><div class="pn">${nm}</div><div class="pm">${e.pos||e.dept||'—'}</div></div><span class="rp" style="background:${clr}22;color:${clr}">${e.reg}</span><div class="pd">${fmt(e.ob)}</div></div>`;}).join('');
+  // Leavers
+  const leavers=emps.filter(e=>resIn(e,cMs,cMe)).slice(0,12);
+  document.getElementById('bL').textContent=leavers.length+' 人';
+  document.getElementById('leavers').innerHTML=leavers.length===0?`<div class="emp">本月暫無離職人員</div>`:leavers.map(e=>{const nm=e.pfn||e.eid;const[bg,fg]=av(nm);const clr=RC[e.reg]||'#8b949e';return`<div class="pr"><div class="av" style="background:${bg};color:${fg}">${ini(nm)}</div><div class="pi"><div class="pn">${nm}</div><div class="pm">${e.pos||e.dept||'—'}</div></div><span class="rp" style="background:${clr}22;color:${clr}">${e.reg}</span><div class="pd">${fmt(e.res)}</div></div>`;}).join('');
+  document.getElementById('loading').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('ts').textContent='更新於 '+new Date().toLocaleString('zh-TW',{hour12:false});
+}
+init();
+</script>
+</body>
+</html>
